@@ -1,0 +1,7 @@
+[package]
+name = "rustraw"
+version = "0.1.0"
+authors = ["Timothy Woodford <timthewoodford@gmail.com>"]
+
+[dependencies]
+libc = "0.1"

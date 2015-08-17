@@ -1,2 +1,2 @@
 # rustraw
-Rust interface to libraw - read RAW images
+Interface to libraw - read RAW images from Rust.
