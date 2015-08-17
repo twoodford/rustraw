@@ -78,7 +78,15 @@ pub struct LibrawColorData {
 }
 
 #[repr(C)]
-pub struct LibrawPh1;
+pub struct LibrawPh1 {
+    format: i32,
+    key_off: i32,
+    t_black: i32,
+    black_off: i32,
+    split_col: i32,
+    tag_21a: i32,
+    tag_210: f32,
+}
 
 #[repr(C)]
 pub struct LibrawImgOther {
@@ -94,7 +102,43 @@ pub struct LibrawImgOther {
 }
 
 #[repr(C)]
-pub struct LibrawThumb;
+pub struct LibrawThumb {
+    tformat: LibrawThumbnailFormat,
+    twidth: u16,
+    theight: u16,
+    tlength: u32,
+    tcolors: i32,
+    thumb: *mut c_char,
+}
 
 #[repr(C)]
-pub struct LibrawRawData;
+pub struct LibrawRawData {
+    raw_alloc: *mut libc::c_void,
+    raw_image: *mut u16,
+    color4_image: [*mut u16; 4],
+    color3_image: [*mut u16; 3],
+    ph1_black: [*mut i16; 2],
+    iparams: LibrawIparams,
+    sizes: LibrawImageSizes,
+    ioparams: LibrawInternalOutputParams,
+    color: LibrawColorData,
+}
+
+#[repr(C)]
+pub struct LibrawInternalOutputParams {
+    mix_green: u32,
+    raw_color: u32,
+    zero_is_bad: u32,
+    shrink: u16,
+    fuji_width: u16,
+}
+
+// C enum definitions
+#[repr(C)]
+enum LibrawThumbnailFormat {
+    Unknown = 0,
+    Jpeg = 1,
+    Bitmap = 2,
+    Layer = 4,
+    Rollei = 5,
+}
