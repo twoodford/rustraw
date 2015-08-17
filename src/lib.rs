@@ -1,7 +1,7 @@
 extern crate libc;
 
 use std::ffi::CString;
-use libc::types::os::arch::c95::c_char;
+use libc::types::os::arch::c95::{c_char, time_t};
 
 // C function definitions
 #[link(name = "raw")]
@@ -15,7 +15,7 @@ extern {
 
 // C struct definitions
 #[repr(C)]
-struct LibrawData {
+pub struct LibrawData {
     image: [*mut u16; 4],
     sizes: LibrawImageSizes,
     idata: LibrawIparams,
@@ -29,7 +29,7 @@ struct LibrawData {
 }
 
 #[repr(C)]
-struct LibrawImageSizes {
+pub struct LibrawImageSizes {
     raw_height: u16,
     raw_width: u16,
     height: u16,
@@ -45,7 +45,7 @@ struct LibrawImageSizes {
 }
 
 #[repr(C)]
-struct LibrawIparams {
+pub struct LibrawIparams {
     make: [c_char; 64],
     model: [c_char; 64],
     raw_count: u32,
@@ -58,7 +58,7 @@ struct LibrawIparams {
 }
 
 #[repr(C)]
-struct LibrawColorData {
+pub struct LibrawColorData {
     make: [c_char; 64],
     model: [c_char; 64],
     raw_count: u32,
@@ -78,13 +78,23 @@ struct LibrawColorData {
 }
 
 #[repr(C)]
-struct LibrawPh1;
+pub struct LibrawPh1;
 
 #[repr(C)]
-struct LibrawImgOther;
+pub struct LibrawImgOther {
+    iso_speed: f32,
+    shutter: f32,
+    aperture: f32,
+    focal_len: f32,
+    timestamp: time_t,
+    shot_order: u32,
+    gpsdata: [u32; 32],
+    desc: [c_char; 512],
+    artist: [c_char; 64],
+}
 
 #[repr(C)]
-struct LibrawThumb;
+pub struct LibrawThumb;
 
 #[repr(C)]
-struct LibrawRawData;
+pub struct LibrawRawData;
