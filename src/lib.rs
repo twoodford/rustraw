@@ -1,5 +1,7 @@
 extern crate libc;
 
+use std::error;
+use std::fmt;
 use std::ffi::CString;
 use libc::types::os::arch::c95::{c_char, time_t};
 
@@ -29,7 +31,7 @@ pub struct LibrawData {
 }
 
 #[repr(C)]
-pub struct LibrawImageSizes {
+struct LibrawImageSizes {
     raw_height: u16,
     raw_width: u16,
     height: u16,
@@ -45,7 +47,7 @@ pub struct LibrawImageSizes {
 }
 
 #[repr(C)]
-pub struct LibrawIparams {
+struct LibrawIparams {
     make: [c_char; 64],
     model: [c_char; 64],
     raw_count: u32,
@@ -58,7 +60,7 @@ pub struct LibrawIparams {
 }
 
 #[repr(C)]
-pub struct LibrawColorData {
+struct LibrawColorData {
     make: [c_char; 64],
     model: [c_char; 64],
     raw_count: u32,
@@ -78,7 +80,7 @@ pub struct LibrawColorData {
 }
 
 #[repr(C)]
-pub struct LibrawPh1 {
+struct LibrawPh1 {
     format: i32,
     key_off: i32,
     t_black: i32,
@@ -89,7 +91,7 @@ pub struct LibrawPh1 {
 }
 
 #[repr(C)]
-pub struct LibrawImgOther {
+struct LibrawImgOther {
     iso_speed: f32,
     shutter: f32,
     aperture: f32,
@@ -102,7 +104,7 @@ pub struct LibrawImgOther {
 }
 
 #[repr(C)]
-pub struct LibrawThumb {
+struct LibrawThumb {
     tformat: LibrawThumbnailFormat,
     twidth: u16,
     theight: u16,
@@ -112,7 +114,7 @@ pub struct LibrawThumb {
 }
 
 #[repr(C)]
-pub struct LibrawRawData {
+struct LibrawRawData {
     raw_alloc: *mut libc::c_void,
     raw_image: *mut u16,
     color4_image: [*mut u16; 4],
@@ -125,7 +127,7 @@ pub struct LibrawRawData {
 }
 
 #[repr(C)]
-pub struct LibrawInternalOutputParams {
+struct LibrawInternalOutputParams {
     mix_green: u32,
     raw_color: u32,
     zero_is_bad: u32,
@@ -141,4 +143,72 @@ enum LibrawThumbnailFormat {
     Bitmap = 2,
     Layer = 4,
     Rollei = 5,
+}
+
+// Errors
+pub enum LibrawError {
+    NulError(std::ffi::NulError),
+    AllocError(LibrawAllocError),
+    IOError(std::io::Error),
+    LibError(LibrawLibraryError),
+}
+
+#[derive(Debug)]
+pub struct LibrawAllocError;
+
+impl fmt::Display for LibrawAllocError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        "image data allocation failed".fmt(f)
+    }
+}
+
+impl error::Error for LibrawAllocError {
+    fn description(&self) -> &str {
+        "image data allocation failed"
+    }
+}
+
+#[derive(Debug)]
+pub struct LibrawLibraryError;
+
+impl fmt::Display for LibrawLibraryError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        "internal libraw library error".fmt(f)
+    }
+}
+
+impl error::Error for LibrawLibraryError {
+    fn description(&self) -> &str {
+        "internal libraw library error"
+    }
+}
+
+// Higher-level unsafe methods
+unsafe fn init_data() -> Result<*mut LibrawData, LibrawError> {
+    // 0 = no flags
+    // 1 = no memory error callback
+    // 2 = non data error callback
+    // 3 = both
+    let data = libraw_init(3);
+    if data.is_null() {
+        Err(LibrawError::AllocError(LibrawAllocError))
+    } else {
+        Ok(data)
+    }
+}
+
+unsafe fn read_img(filepath: &str) -> Result<*mut LibrawData, LibrawError> {
+    let fpath = match CString::new(filepath) {
+        Ok(v) => v,
+        Err(e) => return Err(LibrawError::NulError(e)),
+    };
+    let data = try!(init_data());
+    let res: i32 = libraw_open_file(data, fpath.as_ptr());
+    if res > 0 {
+        Err(LibrawError::IOError(std::io::Error::from_raw_os_error(res)))
+    } else if res < 0 {
+        Err(LibrawError::LibError(LibrawLibraryError))
+    } else {
+        Ok(data)
+    }
 }
