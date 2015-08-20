@@ -6,6 +6,8 @@ use std::path;
 use std::ffi::CString;
 use std::marker::PhantomData;
 use libc::types::os::arch::c95::{c_char, time_t};
+use libc::types::common::c95::c_void;
+use libc::funcs::c95::stdlib::free;
 
 // C function definitions
 #[link(name = "raw")]
@@ -231,7 +233,7 @@ pub fn load_raw_at_path<'a>(fpath: &'a path::Path) -> Result<RawData<'a>, Libraw
         };
     
         let raw_dat: RawData = RawData{
-            librawData: unsafe_val,
+            libraw_data: unsafe_val,
             phantom: PhantomData
         };
         Ok(raw_dat)
@@ -239,6 +241,14 @@ pub fn load_raw_at_path<'a>(fpath: &'a path::Path) -> Result<RawData<'a>, Libraw
 }
 
 pub struct RawData<'a> {
-    librawData: *const LibrawData,
+    libraw_data: *mut LibrawData, // Needs to be mutable for free()
     phantom: PhantomData<&'a LibrawData>,
+}
+
+impl<'a> Drop for RawData<'a> {
+    fn drop(&mut self) {
+        unsafe {
+            free((self.libraw_data as *mut c_void));
+        }
+    }
 }
