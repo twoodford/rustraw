@@ -2,7 +2,9 @@ extern crate libc;
 
 use std::error;
 use std::fmt;
+use std::path;
 use std::ffi::CString;
+use std::marker::PhantomData;
 use libc::types::os::arch::c95::{c_char, time_t};
 
 // C function definitions
@@ -184,6 +186,9 @@ impl error::Error for LibrawLibraryError {
 }
 
 // Higher-level unsafe methods
+// These methods may change as I find better ways to implement this
+// Specifically, it might be better to read the file in Rust and pass 
+// the resulting buffer to libraw
 unsafe fn init_data() -> Result<*mut LibrawData, LibrawError> {
     // 0 = no flags
     // 1 = no memory error callback
@@ -197,7 +202,7 @@ unsafe fn init_data() -> Result<*mut LibrawData, LibrawError> {
     }
 }
 
-unsafe fn read_img(filepath: &str) -> Result<*mut LibrawData, LibrawError> {
+unsafe fn read_img_at_path(filepath: &str) -> Result<*mut LibrawData, LibrawError> {
     let fpath = match CString::new(filepath) {
         Ok(v) => v,
         Err(e) => return Err(LibrawError::NulError(e)),
@@ -211,4 +216,29 @@ unsafe fn read_img(filepath: &str) -> Result<*mut LibrawData, LibrawError> {
     } else {
         Ok(data)
     }
+}
+
+// Public interface
+pub fn load_raw_at_path<'a>(fpath: &'a path::Path) -> Result<RawData<'a>, LibrawError> {
+    let pathstr = match fpath.to_str() {
+        Some(v) => v,
+        None => return Err(LibrawError::AllocError(LibrawAllocError)),
+    };
+    unsafe {
+        let unsafe_val = match read_img_at_path(pathstr) {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
+    
+        let raw_dat: RawData = RawData{
+            librawData: unsafe_val,
+            phantom: PhantomData
+        };
+        Ok(raw_dat)
+    }
+}
+
+pub struct RawData<'a> {
+    librawData: *const LibrawData,
+    phantom: PhantomData<&'a LibrawData>,
 }
