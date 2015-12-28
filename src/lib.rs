@@ -22,16 +22,16 @@ extern {
 // C struct definitions
 #[repr(C)]
 pub struct LibrawData {
-    image: [*mut u16; 4],
-    sizes: LibrawImageSizes,
-    idata: LibrawIparams,
-    progress_flags: u32,
-    process_warnings: u32,
-    color: LibrawColorData,
-    other: LibrawImgOther,
-    thumbnail: LibrawThumb,
-    rawdata: LibrawRawData,
-    parent_class: *mut libc::c_void,
+    pub image: [*mut u16; 4],
+    pub sizes: LibrawImageSizes,
+    pub idata: LibrawIparams,
+    pub progress_flags: u32,
+    pub process_warnings: u32,
+    pub color: LibrawColorData,
+    pub other: LibrawImgOther,
+    pub thumbnail: LibrawThumb,
+    pub rawdata: LibrawRawData,
+    pub parent_class: *mut libc::c_void,
 }
 
 #[repr(C)]
@@ -245,10 +245,50 @@ pub struct RawData<'a> {
     phantom: PhantomData<&'a LibrawData>,
 }
 
+pub struct RectangleSize {
+    width: usize,
+    height: usize,
+}
+
 impl<'a> Drop for RawData<'a> {
+    //! Frees the underlying libraw pointer
     fn drop(&mut self) {
         unsafe {
             free((self.libraw_data as *mut c_void));
+        }
+    }
+}
+
+impl<'a> RawData<'a> {
+    /// Get the size of the RAW image with the frame
+    pub fn get_raw_size(&self) -> RectangleSize {
+        unsafe {
+            RectangleSize {
+                height: self.libraw_data.sizes.raw_height,
+                width: self.libraw_data.sizes.raw_width,
+            }
+        }
+    }
+
+    /// Get the size of the image without the frame
+    pub fn get_size(&self) -> RectangleSize {
+        unsafe {
+            RectangleSize {
+                height: self.libraw_data.sizes.height,
+                width: self.libraw_data.sizes.width,
+            }
+        }
+    }
+
+    /// Get an arbitrary value from the RAW image array
+    pub fn get_raw_value(&self, index: usize) -> u16 {
+        // Bounds check for unsafe ptr arithmetic
+        let rawsize = self.get_raw_size();
+        if (index >= rawsize.height * rawsize.width) {
+            panic!("RAW index out of bounds");
+        }
+        unsafe {
+            *self.libraw_data.rawdata.raw_image.offset(index)
         }
     }
 }
